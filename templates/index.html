@@ -1,0 +1,116 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        body {
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            font-size: 16px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        form > .form_section {
+            display: flex;
+            flex-direction: row;
+        }
+
+        form > .form_section .input_text_input,
+        form > .form_section .input_file_upload {
+            width: 50%;
+            padding: 1.3rem;
+        }
+
+        form > .form_section .input_text_input {
+            border-right: 1px solid black;
+            display: flex;
+            flex-direction: column;
+        }
+
+        form > .form_section .input_file_upload {
+            display: flex;
+            align-items: center;
+        }
+
+        form label {
+            display: flex;
+            padding-top: 0.45rem;
+            padding-bottom: 0.45rem;
+        }
+
+        form label select {
+            margin-left: auto;
+            width: 50%;
+        }
+
+        form select {
+            font-size: 1.1rem;
+            padding: 0.3rem;
+        }
+
+        form .classifier_choices {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+        form .classifier_choices > .classifier_choice {
+            display: flex;
+            flex-direction: row;
+        }
+    </style>
+</head>
+<body>
+    <form action="response" method="post" enctype="multipart/form-data">
+        <h1 style="text-align:center;">Income Classifier</h1>
+        <div class="form_section">
+            <div class="input_text_input">
+                {% for key, label in feature_labels.items() %}
+                    <label for="{{ key }}">
+                        {{ label }}
+                        <select name="{{ key }}" id="{{ key }}">
+                            {% for choice in feature_choices.get(key) %}
+                                <option value="{{ choice }}">{{ choice }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                {% endfor %}
+            </div>
+            <div class="input_file_upload">
+                <input type="file" name="input_file" id="input_file">
+            </div>
+        </div>
+
+        <div class="form_section" style="padding:1rem">
+            <label for="classifier" style="width:25%">Classifier</label>
+
+            <div class="classifier_choices">
+                {% for key, label in classifier_choices.items() %}
+                    <div class="classifier_choice">
+                        <input type="radio" name="classifier" id="{{ key }}" value="{{ key }}" required>
+                        <label for="{{ key }}">{{ label }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form_section">
+            <button type="submit">Classify</button>
+        </div>
+    </form>
+</body>
+</html>
