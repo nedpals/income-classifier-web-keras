@@ -4,6 +4,8 @@ import joblib
 import csv
 import pandas as pd
 
+# TODO: install tensorflow
+
 nb_model = joblib.load('models/model_naivebayes')
 dt_model = joblib.load('models/model_decisiontree')
 
@@ -81,7 +83,7 @@ def response_page():
 
     raw_inputs = list(map(lambda val: val[1], inputs))
     inputs = list(map(lambda val: feature_labels_indices[val[0]][val[1]], inputs))
-    df_inputs = pd.DataFrame([inputs], columns=feature_labels.keys())
+    # df_inputs = pd.DataFrame([inputs], columns=feature_labels.keys())
 
     classifier = request.form.get('classifier')
     if classifier == 'decision_tree':
