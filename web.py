@@ -1,13 +1,11 @@
 import io
-from flask import Flask, render_template, request
-import joblib
 import csv
-import pandas as pd
+# import pandas as pd
+import numpy as np
+from flask import Flask, render_template, request
 from tensorflow import keras
 
-# TODO: install tensorflow
-
-model = keras.models.load_model('models/model')
+model = keras.models.load_model('models/model.h5')
 
 feature_choices = {
     'marital-status': ['Divorced', 'Married-AF-spouse', 'Married-civ-spouse',
@@ -30,8 +28,8 @@ feature_choices = {
 
 feature_labels_indices = { 
     key: {
-        label: idx for idx, label in enumerate(entry) 
-    } for key, entry in feature_choices.items() 
+        label: idx for idx, label in enumerate(entry)
+    } for key, entry in feature_choices.items()
 }
 
 feature_labels = {
@@ -84,10 +82,12 @@ def response_page():
     raw_inputs = list(map(lambda val: val[1], inputs))
     inputs = list(map(lambda val: feature_labels_indices[val[0]][val[1]], inputs))
     # df_inputs = pd.DataFrame([inputs], columns=feature_labels.keys())
+    df_inputs = np.expand_dims(np.array(inputs), axis=0)
+    raw_prediction = model.predict(df_inputs)
+    raw_prediction = int((raw_prediction > 0.5).ravel()[0])
+    prediction = outcomes[raw_prediction]
 
-    prediction = outcomes[model.predict(df_inputs)[0]]
-
-    return render_template('response.html', 
+    return render_template('response.html',
         inputs=raw_inputs,
         prediction=prediction
     )
