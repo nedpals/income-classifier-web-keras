@@ -1,11 +1,13 @@
 import io
 import csv
-# import pandas as pd
 import numpy as np
+import joblib
 from flask import Flask, render_template, request
 from tensorflow import keras
 
-model = keras.models.load_model('models/model.h5')
+nb_model = joblib.load('models/model_naivebayes')
+dt_model = joblib.load('models/model_decisiontree')
+ann_model = keras.models.load_model('models/model.h5')
 
 feature_choices = {
     'marital-status': ['Divorced', 'Married-AF-spouse', 'Married-civ-spouse',
@@ -26,7 +28,7 @@ feature_choices = {
                 'United-States', 'Vietnam', 'Yugoslavia']
 }
 
-feature_labels_indices = { 
+feature_labels_indices = {
     key: {
         label: idx for idx, label in enumerate(entry)
     } for key, entry in feature_choices.items()
@@ -43,7 +45,8 @@ feature_labels = {
 
 classifier_choices = {
     'decision_tree': 'Decision Tree',
-    'naive_bayes': 'Naive Bayes'
+    'naive_bayes': 'Naive Bayes',
+    'ann': 'ANN'
 }
 
 outcomes = ['<=50K', '>50K']
@@ -83,9 +86,18 @@ def response_page():
     inputs = list(map(lambda val: feature_labels_indices[val[0]][val[1]], inputs))
     # df_inputs = pd.DataFrame([inputs], columns=feature_labels.keys())
     df_inputs = np.expand_dims(np.array(inputs), axis=0)
-    raw_prediction = model.predict(df_inputs)
-    raw_prediction = int((raw_prediction > 0.5).ravel()[0])
-    prediction = outcomes[raw_prediction]
+
+    classifier = request.form.get('classifier')
+    if classifier == 'decision_tree':
+        prediction = outcomes[dt_model.predict(df_inputs)[0]]
+    elif classifier == 'naive_bayes':
+        prediction = outcomes[nb_model.predict(df_inputs)[0]]
+    elif classifier == 'ann':
+        raw_prediction = ann_model.predict(df_inputs)
+        raw_prediction = int((raw_prediction > 0.5).ravel()[0])
+        prediction = outcomes[raw_prediction]
+    else:
+        prediction = 'invalid classifier'
 
     return render_template('response.html',
         inputs=raw_inputs,
