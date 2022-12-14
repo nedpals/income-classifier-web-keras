@@ -62,8 +62,19 @@ def index_page():
         classifier_choices=classifier_choices
     )
 
-@app.post("/response")
-def response_page():
+@app.get("/classifiers")
+def classifiers():
+    return classifier_choices
+
+@app.get("/features")
+def features():
+    return {
+        'choices': feature_choices,
+        'labels': feature_labels
+    }
+
+@app.post("/predict")
+def predict_inputs():
     inputs = []
     prediction = 'n/a'
 
@@ -84,7 +95,6 @@ def response_page():
 
     raw_inputs = list(map(lambda val: val[1], inputs))
     inputs = list(map(lambda val: feature_labels_indices[val[0]][val[1]], inputs))
-    # df_inputs = pd.DataFrame([inputs], columns=feature_labels.keys())
     df_inputs = np.expand_dims(np.array(inputs), axis=0)
 
     classifier = request.form.get('classifier')
@@ -99,10 +109,12 @@ def response_page():
     else:
         prediction = 'invalid classifier'
 
-    return render_template('response.html',
-        inputs=raw_inputs,
-        prediction=prediction
-    )
+    return {
+        'inputs': raw_inputs,
+        'prediction': prediction,
+        'raw_prediction': raw_prediction,
+        'classifier': classifier
+    }
 
 if __name__ == "__main__":
     app.run()
