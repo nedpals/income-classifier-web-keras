@@ -5,51 +5,157 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Income Classifier</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
-<body class="bg-gray-200 min-h-screen flex justify-items-center items-center">
-    <main class="bg-white max-w-4xl w-full mx-auto rounded-lg shadow-lg p-8">
-        <div class="text-center mb-8">
+<body class="bg-gray-200 min-h-screen flex flex-col justify-items-center items-center">
+    <header class="bg-gradient-to-b from-gray-800 to-gray-900 text-white w-full">
+        <div class="max-w-4xl w-full mx-auto text-center px-4 pt-16 pb-48">
             <h1 class="text-center text-5xl font-bold mb-2">Income Classifier</h1>
-            <p class="text-xl text-gray-700">Predict your income something something bla bla bla (todo)</p>
+            <p class="text-xl text-white opacity-75">Predict your income something something bla bla bla (todo)</p>
         </div>
+    </header>
 
-        <form action="response" method="post" enctype="multipart/form-data" class="flex flex-col items-center justify-items-center">
-            {% for key, label in feature_labels.items() %}
-            <div class="flex w-2/3 py-2 items-center justify-between">
-                <label for="{{ key }}">{{ label }}</label>
-                <select class="w-1/2 border px-3 py-2 rounded-lg" name="{{ key }}" id="{{ key }}">
-                    {% for choice in feature_choices.get(key) %}
-                        <option value="{{ choice }}">{{ choice }}</option>
+    <main id="app" class="bg-white max-w-4xl w-full mx-auto rounded-lg shadow-lg p-8 -mt-32 mb-8">
+        <form v-if="!isResult" @submit.prevent="fetchResult" class="flex flex-col items-center justify-items-center">
+            <div class="pb-8 flex flex-col w-full items-center justify-items-center">
+                <h3 class="uppercase mb-4 text-gray-400 tracking-widest">Inputs</h3>
+    
+                <div class="w-full md:w-1/2 lg:w-1/3 border flex flex-row mb-8 rounded-md shadow">
+                    <button @click="isUpload = false" :class="[buttonCss(!isUpload)]" class="w-1/2 rounded-l-md bg-gradient-to-b px-6 py-1">Via form</button>
+                    <button @click="isUpload = true" :class="[buttonCss(isUpload)]" class="w-1/2 rounded-r-md bg-gradient-to-b px-6 py-1">Via upload</button>
+                </div>
+    
+                <div v-if="!isUpload" class="w-full flex flex-col items-center justify-items-center">
+                    {% for key, label in feature_labels.items() %}
+                    <div class="flex flex-col md:flex-row w-full md:w-2/3 py-2 md:items-center md:justify-between">
+                        <label class="mb-2 md:mb-0" for="{{ key }}">{{ label }}</label>
+                        <select class="w-full md:w-1/2 border px-3 py-2 rounded-lg" name="{{ key }}" id="{{ key }}">
+                            {% for choice in feature_choices.get(key) %}
+                                <option value="{{ choice }}">{{ choice }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     {% endfor %}
-                </select>
-            </div>
-            {% endfor %}
-                <!-- <div class="input_file_upload">
+                </div>
+
+                <div v-else class="flex flex-col border w-full items-center justify-center py-24 rounded bg-gray-50">
                     <input type="file" name="input_file" id="input_file">
-                </div> -->
-        
-            <div class="flex flex-col">
-                <label for="classifier">Select classifier</label>
-        
-                <div class="classifier_choices">
+                </div>
+            </div>
+
+            
+            <div class="flex flex-col border-t pt-8 w-full">
+                <h3 class="uppercase mb-4 text-gray-400 text-center tracking-widest">Classifier</h3>
+            
+                <div class="flex flex-row space-x-2 mx-auto">
                     {% for key, label in classifier_choices.items() %}
-                        <div class="classifier_choice">
-                            <input type="radio" name="classifier" id="{{ key }}" value="{{ key }}" required>
-                            <label for="{{ key }}">{{ label }}</label>
+                        <div class="flex px-2 py-1 space-x-2 hover:bg-gray-100 rounded">
+                            <input type="radio" id="{{ key }}" name="classifier" value="{{ key }}" required>
+                            <label for="{{ key }}">
+                                {{ label }}
+                            </label>
                         </div>
                     {% endfor %}
                 </div>
             </div>
-        
-            <div class="flex w-2/3 mt-8">
-                <button class="mx-auto bg-gradient-to-b from-blue-300 to-blue-500 hover:bg-blue-500 text-white text-xl px-6 py-2 rounded shadow-md w-2/3" type="submit">
-                    Classify
+            
+            <div class="flex w-full md:w-2/3 mt-8">
+                <button class="bg-gradient-to-b font-bold mx-auto from-green-500 to-green-600 hover:from-green-600 hover:to-green-600 text-white text-xl px-6 py-2 rounded shadow-md w-full md:w-2/3" type="submit">
+                    Predict
                 </button>
             </div>
         </form>
+
+        <div v-else class="w-full flex flex-col items-center justify-items-center">
+            {% raw %}
+            <p v-if="error != null">
+                Error: {{ error }}
+            </p>
+            {% endraw %}
+            
+            <p v-else-if="result == null" class="text-center py-32 text-2xl animate-pulse">Fetching results...</p>
+
+            <div v-else class="w-full md:w-2/3 flex flex-col md:flex-row">
+                <div class="w-full md:w-1/2 border-b md:border-b-0 md:border-r px-4 pb-0 pb-4 md:pb-0">
+                    <h3 class="text-center uppercase mb-4 text-gray-400 tracking-widest">Inputs</h3>
+                    {% raw %}
+                    <ul class="list-disc">
+                        <li :key="'input_' + idx" v-for="(input, idx) in result.inputs">
+                            {{ input }}
+                        </li>
+                    </ul>
+                    {% endraw %}
+                </div>
+
+                <div class="w-full md:w-1/2 px-4 pt-4 md:pt-0">
+                    <h3 class="text-center uppercase mb-4 text-gray-400 tracking-widest">Prediction</h3>
+                    {% raw %}
+                    <div class="py-24 text-center">
+                        <h3 class="mb-2 font-bold text-3xl text-green-600">
+                            {{ result.prediction }}
+                        </h3>
+
+                        <p class="text-gray-400">Classified using {{ result.classifier }}</p>
+                    </div>
+                    {% endraw %}
+                </div>
+            </div>
+
+            <div v-if="error != null || result != null" class="flex w-full md:w-2/3 mt-8">
+                <button @click="isResult = false" class="bg-gradient-to-b font-bold mx-auto from-green-500 to-green-600 hover:from-green-600 hover:to-green-600 text-white text-xl px-6 py-2 rounded shadow-md w-full md:w-2/3" type="submit">
+                    Predict Again
+                </button>
+            </div>
+        </div>
     </main>
 
+    <footer class="text-gray-500 mb-8">
+        <p>Copyright &copy; 2022 Ned Palacios. <a href="https://github.com/nedpals/income-classifier-web-keras" class="hover:underline">GitHub Repo</a></p>
+    </footer>
+
     <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    isUpload: false,
+                    isResult: false,
+                    result: null,
+                    error: null
+                }
+            },
+            methods: {
+                buttonCss(isActive) {
+                    if (isActive) {
+                        return 'from-blue-300 to-blue-500 hover:from-blue-400 hover:to-blue-600 text-white';
+                    } else {
+                        return 'from-white to-gray-100 hover:from-gray-100 hover:to-gray-200';
+                    }
+                },
+                fetchResult(evt) {
+                    if (!evt || !(evt.target instanceof HTMLFormElement)) return;
+                    this.isResult = true;
+                    this.result = null;
+                    this.error = null;
+
+                    const formData = new FormData(evt.target);
+                    
+                    fetch('/prediction', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then((resp) => resp.json())
+                        .then((json) => {
+                            this.result = json;
+                        })
+                        .catch((err) => {
+                            console.error(err);
+                            this.error = `${err}`;
+                        });
+                }
+            }
+        }).mount('#app');
     </script>
 </body>
 </html>

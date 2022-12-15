@@ -2,6 +2,7 @@ import io
 import csv
 import numpy as np
 import joblib
+import pandas as pd
 from flask import Flask, render_template, request
 from tensorflow import keras
 
@@ -54,6 +55,22 @@ outcomes = ['<=50K', '>50K']
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
+def predict_decision_tree(inputs: pd.DataFrame):
+    return dt_model.predict(inputs)[0]
+
+def predict_naive_bayes(inputs: pd.DataFrame):
+    return nb_model.predict(inputs)[0]
+
+def predict_ann(inputs: np.ndarray):
+    raw_prediction = ann_model.predict(inputs)
+    return int((raw_prediction > 0.5).ravel()[0])
+
+classifiers = {
+    'decision_tree': predict_decision_tree,
+    'naive_bayes': predict_naive_bayes,
+    'ann': predict_ann
+}
+
 @app.route("/")
 def index_page():
     return render_template('index.html',
@@ -62,18 +79,7 @@ def index_page():
         classifier_choices=classifier_choices
     )
 
-@app.get("/classifiers")
-def classifiers():
-    return classifier_choices
-
-@app.get("/features")
-def features():
-    return {
-        'choices': feature_choices,
-        'labels': feature_labels
-    }
-
-@app.post("/predict")
+@app.post("/prediction")
 def predict_inputs():
     inputs = []
     prediction = 'n/a'
@@ -95,25 +101,25 @@ def predict_inputs():
 
     raw_inputs = list(map(lambda val: val[1], inputs))
     inputs = list(map(lambda val: feature_labels_indices[val[0]][val[1]], inputs))
-    df_inputs = np.expand_dims(np.array(inputs), axis=0)
 
     classifier = request.form.get('classifier')
-    if classifier == 'decision_tree':
-        prediction = outcomes[dt_model.predict(df_inputs)[0]]
-    elif classifier == 'naive_bayes':
-        prediction = outcomes[nb_model.predict(df_inputs)[0]]
-    elif classifier == 'ann':
-        raw_prediction = ann_model.predict(df_inputs)
-        raw_prediction = int((raw_prediction > 0.5).ravel()[0])
+    if classifier in classifiers:
+        if classifier == 'ann':
+            final_input = np.expand_dims(np.array(inputs), axis=0)
+        else:
+            final_input = pd.DataFrame([inputs], columns=feature_labels.keys())
+        
+        raw_prediction = classifiers[classifier](inputs=final_input)
         prediction = outcomes[raw_prediction]
     else:
+        raw_prediction = []
         prediction = 'invalid classifier'
 
     return {
         'inputs': raw_inputs,
         'prediction': prediction,
-        'raw_prediction': raw_prediction,
-        'classifier': classifier
+        'raw_prediction': int(raw_prediction),
+        'classifier': classifier_choices[classifier]
     }
 
 if __name__ == "__main__":
